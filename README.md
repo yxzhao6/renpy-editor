@@ -29,7 +29,7 @@ A beautiful, modern web-based markdown editor with real-time preview and powerfu
 Type `/` in the editor to open a dropdown menu with quick insertion options:
 
 - `/text` - Generate AI-powered text using Gemini API
-- `/image` - Insert image syntax
+- `/image` - Generate AI-powered images using Gemini API
 
 ### Using Slash Commands
 
@@ -48,7 +48,16 @@ When you select `/text`, a popup will appear where you can:
 3. The AI-generated text will be inserted into your document
 4. The popup includes loading states and error handling
 
-**Note:** The AI text generation feature uses the [Google Gemini API](https://ai.google.dev/api?lang=node) to generate content based on your prompts.
+### AI Image Generation (`/image`)
+
+When you select `/image`, a popup will appear where you can:
+
+1. Enter a prompt describing the image you want to generate
+2. Press Enter or click "Generate Image" to send to Gemini API
+3. The AI-generated image will be inserted as markdown with a data URL
+4. The image appears directly in your document and preview
+
+**Note:** Both AI features use the [Google Gemini API](https://ai.google.dev/gemini-api/docs/image-generation#javascript) to generate content based on your prompts. Image generation uses the `gemini-2.0-flash-preview-image-generation` model.
 
 ## Keyboard Shortcuts
 

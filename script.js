@@ -206,8 +206,9 @@ function executeSlashCommand(command) {
             showLLMPromptInput(newTextBefore, textAfterCursor);
             return; // Don't proceed with normal insertion
         case 'image':
-            insertText = '![Alt text](image-url)';
-            break;
+            // Show image generation prompt input
+            showImagePromptInput(newTextBefore, textAfterCursor);
+            return; // Don't proceed with normal insertion
         default:
             insertText = '';
     }
@@ -364,6 +365,157 @@ async function generateLLMText() {
         status.innerHTML = `<span class="error">Error: ${error.message}</span>`;
         generateBtn.disabled = false;
         generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate';
+    }
+}
+
+// Show image generation prompt input popup
+function showImagePromptInput(textBefore, textAfter) {
+    // Hide slash command dropdown
+    hideSlashCommandDropdown();
+    
+    // Create popup overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'llm-prompt-overlay';
+    overlay.innerHTML = `
+        <div class="llm-prompt-popup">
+            <div class="llm-prompt-header">
+                <h3><i class="fas fa-image"></i> AI Image Generation</h3>
+                <button class="llm-prompt-close" onclick="closeLLMPrompt()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="llm-prompt-content">
+                <label for="image-prompt-input">Describe the image you want to generate:</label>
+                <input type="text" id="image-prompt-input" placeholder="A beautiful sunset over mountains..." />
+                <div class="llm-prompt-buttons">
+                    <button class="llm-prompt-generate" onclick="generateImage()">
+                        <i class="fas fa-magic"></i> Generate Image
+                    </button>
+                    <button class="llm-prompt-cancel" onclick="closeLLMPrompt()">
+                        Cancel
+                    </button>
+                </div>
+                <div class="llm-prompt-status" id="image-prompt-status"></div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Store context for later use
+    overlay.dataset.textBefore = textBefore;
+    overlay.dataset.textAfter = textAfter;
+    
+    // Focus input and handle Enter key
+    const input = document.getElementById('image-prompt-input');
+    input.focus();
+    
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            generateImage();
+        } else if (e.key === 'Escape') {
+            closeLLMPrompt();
+        }
+    });
+    
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeLLMPrompt();
+        }
+    });
+}
+
+// Generate image using Gemini API
+async function generateImage() {
+    const input = document.getElementById('image-prompt-input');
+    const status = document.getElementById('image-prompt-status');
+    const generateBtn = document.querySelector('.llm-prompt-generate');
+    const overlay = document.querySelector('.llm-prompt-overlay');
+    
+    const prompt = input.value.trim();
+    if (!prompt) {
+        status.innerHTML = '<span class="error">Please enter a prompt</span>';
+        return;
+    }
+    
+    // Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    status.innerHTML = '<span class="loading">Generating image with AI...</span>';
+    
+    try {
+        // Call Gemini API for image generation
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyAyvZHMQL723otF0nrBwGy6O4bQ5IiIelo`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: prompt
+                    }]
+                }],
+                generationConfig: {
+                    responseModalities: ["TEXT", "IMAGE"]
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            let imageData = null;
+            let imageText = '';
+            
+            // Extract image data and text from response
+            for (const part of data.candidates[0].content.parts) {
+                if (part.text) {
+                    imageText = part.text;
+                } else if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith('image/')) {
+                    imageData = part.inlineData.data;
+                }
+            }
+            
+            if (imageData) {
+                // Convert base64 to data URL
+                const mimeType = data.candidates[0].content.parts.find(p => p.inlineData)?.inlineData.mimeType || 'image/png';
+                const imageUrl = `data:${mimeType};base64,${imageData}`;
+                
+                // Insert image markdown into editor
+                const textBefore = overlay.dataset.textBefore;
+                const textAfter = overlay.dataset.textAfter;
+                
+                const imageMarkdown = `![${prompt}](${imageUrl})`;
+                editor.value = textBefore + imageMarkdown + '\n' + textAfter;
+                
+                // Set cursor position after generated image
+                const newCursorPosition = textBefore.length + imageMarkdown.length + 1;
+                editor.selectionStart = newCursorPosition;
+                editor.selectionEnd = newCursorPosition;
+                
+                // Update preview and close popup
+                updatePreview();
+                closeLLMPrompt();
+                updateStatus('AI image generated successfully!');
+            } else {
+                throw new Error('No image data received from API');
+            }
+        } else {
+            throw new Error('No content generated from API response');
+        }
+        
+    } catch (error) {
+        console.error('Error generating image:', error);
+        status.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Image';
     }
 }
 
