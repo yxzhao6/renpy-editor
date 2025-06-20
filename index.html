@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-edit"></i> Markdown Editor</h1>
+            <div class="toolbar">
+                <button class="toolbar-btn" onclick="insertMarkdown('**', '**')" title="Bold">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('*', '*')" title="Italic">
+                    <i class="fas fa-italic"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('### ', '')" title="Heading">
+                    <i class="fas fa-heading"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('- ', '')" title="List">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('[', '](url)')" title="Link">
+                    <i class="fas fa-link"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('![alt](', ')')" title="Image">
+                    <i class="fas fa-image"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('```\n', '\n```')" title="Code Block">
+                    <i class="fas fa-code"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('`', '`')" title="Inline Code">
+                    <i class="fas fa-terminal"></i>
+                </button>
+                <button class="toolbar-btn" onclick="insertMarkdown('> ', '')" title="Quote">
+                    <i class="fas fa-quote-left"></i>
+                </button>
+                <div class="separator"></div>
+                <button class="toolbar-btn" onclick="saveFile()" title="Save">
+                    <i class="fas fa-save"></i>
+                </button>
+                <button class="toolbar-btn" onclick="loadFile()" title="Load">
+                    <i class="fas fa-folder-open"></i>
+                </button>
+                <button class="toolbar-btn" onclick="clearEditor()" title="Clear">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </header>
+        
+        <main class="editor-container">
+            <div class="editor-pane">
+                <div class="pane-header">
+                    <h3><i class="fas fa-pen"></i> Editor</h3>
+                    <span class="word-count">0 words</span>
+                </div>
+                <textarea id="markdown-editor" placeholder="Start writing your markdown here..."></textarea>
+            </div>
+            
+            <div class="preview-pane">
+                <div class="pane-header">
+                    <h3><i class="fas fa-eye"></i> Preview</h3>
+                    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+                <div id="markdown-preview" class="preview-content"></div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <div class="status-bar">
+                <span id="status">Ready</span>
+                <span class="auto-save">Auto-save enabled</span>
+            </div>
+        </footer>
+    </div>
+    
+    <input type="file" id="file-input" accept=".md,.txt" style="display: none;">
+    
+    <script src="script.js"></script>
+</body>
+</html> 
