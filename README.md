@@ -6,6 +6,7 @@ A beautiful, modern web-based markdown editor with real-time preview and powerfu
 
 - **Real-time Preview** - See your markdown rendered instantly as you type
 - **Modern UI** - Clean, responsive design that works on all devices
+- **Slash Commands** - Type `/` to access quick insertion menu
 - **Toolbar Shortcuts** - Quick formatting buttons for common markdown syntax
 - **Keyboard Shortcuts** - Power user shortcuts for faster editing
 - **Auto-save** - Your work is automatically saved to browser storage
@@ -21,6 +22,33 @@ A beautiful, modern web-based markdown editor with real-time preview and powerfu
 2. Start typing in the editor pane on the left
 3. See your markdown rendered in real-time on the right
 4. Use the toolbar buttons or keyboard shortcuts for formatting
+5. Try typing `/` to access the slash command menu
+
+## Slash Commands
+
+Type `/` in the editor to open a dropdown menu with quick insertion options:
+
+- `/text` - Generate AI-powered text using Gemini API
+- `/image` - Insert image syntax
+
+### Using Slash Commands
+
+1. Type `/` at the beginning of a line
+2. Start typing to filter commands (e.g., `/im` shows image)
+3. Use arrow keys to navigate
+4. Press Enter or click to insert
+5. Press Escape to cancel
+
+### AI Text Generation (`/text`)
+
+When you select `/text`, a popup will appear where you can:
+
+1. Enter a prompt describing what you want to generate
+2. Press Enter or click "Generate" to send to Gemini API
+3. The AI-generated text will be inserted into your document
+4. The popup includes loading states and error handling
+
+**Note:** The AI text generation feature uses the [Google Gemini API](https://ai.google.dev/api?lang=node) to generate content based on your prompts.
 
 ## Keyboard Shortcuts
 
@@ -29,6 +57,10 @@ A beautiful, modern web-based markdown editor with real-time preview and powerfu
 - `Ctrl/Cmd + B` - Bold text
 - `Ctrl/Cmd + I` - Italic text
 - `Tab` - Indent (4 spaces)
+- `/` - Open slash command menu
+- `Arrow Keys` - Navigate slash commands
+- `Enter` - Execute slash command
+- `Escape` - Close slash command menu
 
 ## Toolbar Features
 
@@ -94,6 +126,7 @@ The editor uses CDN-hosted libraries:
 - **Marked.js** - Markdown parsing
 - **DOMPurify** - HTML sanitization
 - **Font Awesome** - Icons
+- **Google Gemini API** - AI text generation
 
 ## Customization
 

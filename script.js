@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeEditor();
     loadFromLocalStorage();
     setupAutoSave();
+    setupSlashCommands();
 });
 
 // Global variables
@@ -10,6 +11,8 @@ let editor;
 let preview;
 let autoSaveInterval;
 let isFullscreen = false;
+let slashCommandDropdown = null;
+let currentSlashCommand = '';
 
 // Initialize the editor
 function initializeEditor() {
@@ -27,6 +30,341 @@ function initializeEditor() {
     
     // Focus the editor
     editor.focus();
+}
+
+// Setup slash commands
+function setupSlashCommands() {
+    editor.addEventListener('input', handleSlashCommand);
+    editor.addEventListener('keydown', handleSlashCommandKeydown);
+    
+    // Create dropdown element
+    createSlashCommandDropdown();
+}
+
+// Create slash command dropdown
+function createSlashCommandDropdown() {
+    slashCommandDropdown = document.createElement('div');
+    slashCommandDropdown.className = 'slash-command-dropdown';
+    slashCommandDropdown.style.display = 'none';
+    document.body.appendChild(slashCommandDropdown);
+}
+
+// Handle slash command input
+function handleSlashCommand(e) {
+    const cursorPosition = editor.selectionStart;
+    const textBeforeCursor = editor.value.substring(0, cursorPosition);
+    const lines = textBeforeCursor.split('\n');
+    const currentLine = lines[lines.length - 1];
+    
+    // Check if current line starts with /
+    if (currentLine.startsWith('/')) {
+        const command = currentLine.substring(1).toLowerCase();
+        currentSlashCommand = command;
+        showSlashCommandDropdown(command);
+    } else {
+        hideSlashCommandDropdown();
+    }
+}
+
+// Handle slash command keyboard navigation
+function handleSlashCommandKeydown(e) {
+    if (slashCommandDropdown.style.display === 'none') return;
+    
+    const items = slashCommandDropdown.querySelectorAll('.slash-command-item');
+    const activeItem = slashCommandDropdown.querySelector('.slash-command-item.active');
+    let currentIndex = -1;
+    
+    if (activeItem) {
+        currentIndex = Array.from(items).indexOf(activeItem);
+    }
+    
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            if (currentIndex < items.length - 1) {
+                if (activeItem) activeItem.classList.remove('active');
+                items[currentIndex + 1].classList.add('active');
+            }
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            if (currentIndex > 0) {
+                if (activeItem) activeItem.classList.remove('active');
+                items[currentIndex - 1].classList.add('active');
+            }
+            break;
+        case 'Enter':
+            e.preventDefault();
+            if (activeItem) {
+                executeSlashCommand(activeItem.dataset.command);
+            }
+            break;
+        case 'Escape':
+            e.preventDefault();
+            hideSlashCommandDropdown();
+            break;
+    }
+}
+
+// Show slash command dropdown
+function showSlashCommandDropdown(command) {
+    const commands = [
+        { name: 'text', description: 'Insert plain text', icon: 'fas fa-font' },
+        { name: 'image', description: 'Insert image', icon: 'fas fa-image' }
+    ];
+    
+    const filteredCommands = commands.filter(cmd => 
+        cmd.name.includes(command) || cmd.description.toLowerCase().includes(command)
+    );
+    
+    if (filteredCommands.length === 0) {
+        hideSlashCommandDropdown();
+        return;
+    }
+    
+    slashCommandDropdown.innerHTML = filteredCommands.map((cmd, index) => `
+        <div class="slash-command-item ${index === 0 ? 'active' : ''}" data-command="${cmd.name}">
+            <i class="${cmd.icon}"></i>
+            <div class="slash-command-content">
+                <div class="slash-command-name">${cmd.name}</div>
+                <div class="slash-command-description">${cmd.description}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add click handlers
+    slashCommandDropdown.querySelectorAll('.slash-command-item').forEach(item => {
+        item.addEventListener('click', () => {
+            executeSlashCommand(item.dataset.command);
+        });
+    });
+    
+    // Position dropdown
+    positionSlashCommandDropdown();
+    slashCommandDropdown.style.display = 'block';
+}
+
+// Position slash command dropdown
+function positionSlashCommandDropdown() {
+    const cursorPosition = editor.selectionStart;
+    const textBeforeCursor = editor.value.substring(0, cursorPosition);
+    const lines = textBeforeCursor.split('\n');
+    const currentLineNumber = lines.length - 1;
+    const currentLineText = lines[currentLineNumber];
+    
+    // Create a temporary element to measure text dimensions
+    const temp = document.createElement('span');
+    temp.style.font = window.getComputedStyle(editor).font;
+    temp.style.visibility = 'hidden';
+    temp.style.position = 'absolute';
+    temp.style.whiteSpace = 'pre';
+    temp.textContent = currentLineText;
+    document.body.appendChild(temp);
+    
+    const textWidth = temp.offsetWidth;
+    const lineHeight = parseInt(window.getComputedStyle(editor).lineHeight);
+    document.body.removeChild(temp);
+    
+    // Get editor position
+    const editorRect = editor.getBoundingClientRect();
+    const editorPadding = 24; // 1.5rem padding
+    
+    // Calculate position
+    const left = editorRect.left + editorPadding + textWidth;
+    const top = editorRect.top + editorPadding + (currentLineNumber * lineHeight) + lineHeight;
+    
+    slashCommandDropdown.style.left = `${left}px`;
+    slashCommandDropdown.style.top = `${top}px`;
+}
+
+// Hide slash command dropdown
+function hideSlashCommandDropdown() {
+    if (slashCommandDropdown) {
+        slashCommandDropdown.style.display = 'none';
+    }
+}
+
+// Execute slash command
+function executeSlashCommand(command) {
+    const cursorPosition = editor.selectionStart;
+    const textBeforeCursor = editor.value.substring(0, cursorPosition);
+    const textAfterCursor = editor.value.substring(cursorPosition);
+    
+    // Find the start of the current line
+    const lines = textBeforeCursor.split('\n');
+    const currentLineStart = textBeforeCursor.lastIndexOf('\n') + 1;
+    
+    // Remove the slash command
+    const newTextBefore = textBeforeCursor.substring(0, currentLineStart);
+    
+    // Insert the appropriate content based on command
+    let insertText = '';
+    
+    switch (command) {
+        case 'text':
+            // Show LLM prompt input instead of inserting text directly
+            showLLMPromptInput(newTextBefore, textAfterCursor);
+            return; // Don't proceed with normal insertion
+        case 'image':
+            insertText = '![Alt text](image-url)';
+            break;
+        default:
+            insertText = '';
+    }
+    
+    // Update editor content
+    editor.value = newTextBefore + insertText + '\n' + textAfterCursor;
+    
+    // Set cursor position after inserted content
+    const newCursorPosition = currentLineStart + insertText.length + 1;
+    editor.selectionStart = newCursorPosition;
+    editor.selectionEnd = newCursorPosition;
+    
+    // Hide dropdown and update preview
+    hideSlashCommandDropdown();
+    editor.focus();
+    updatePreview();
+    
+    // Update status
+    updateStatus(`Inserted ${command}`);
+}
+
+// Show LLM prompt input popup
+function showLLMPromptInput(textBefore, textAfter) {
+    // Hide slash command dropdown
+    hideSlashCommandDropdown();
+    
+    // Create popup overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'llm-prompt-overlay';
+    overlay.innerHTML = `
+        <div class="llm-prompt-popup">
+            <div class="llm-prompt-header">
+                <h3><i class="fas fa-robot"></i> AI Text Generation</h3>
+                <button class="llm-prompt-close" onclick="closeLLMPrompt()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="llm-prompt-content">
+                <label for="llm-prompt-input">Enter your prompt:</label>
+                <input type="text" id="llm-prompt-input" placeholder="Describe what you want to generate..." />
+                <div class="llm-prompt-buttons">
+                    <button class="llm-prompt-generate" onclick="generateLLMText()">
+                        <i class="fas fa-magic"></i> Generate
+                    </button>
+                    <button class="llm-prompt-cancel" onclick="closeLLMPrompt()">
+                        Cancel
+                    </button>
+                </div>
+                <div class="llm-prompt-status" id="llm-prompt-status"></div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Store context for later use
+    overlay.dataset.textBefore = textBefore;
+    overlay.dataset.textAfter = textAfter;
+    
+    // Focus input and handle Enter key
+    const input = document.getElementById('llm-prompt-input');
+    input.focus();
+    
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            generateLLMText();
+        } else if (e.key === 'Escape') {
+            closeLLMPrompt();
+        }
+    });
+    
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeLLMPrompt();
+        }
+    });
+}
+
+// Close LLM prompt popup
+function closeLLMPrompt() {
+    const overlay = document.querySelector('.llm-prompt-overlay');
+    if (overlay) {
+        document.body.removeChild(overlay);
+    }
+    editor.focus();
+}
+
+// Generate text using Gemini API
+async function generateLLMText() {
+    const input = document.getElementById('llm-prompt-input');
+    const status = document.getElementById('llm-prompt-status');
+    const generateBtn = document.querySelector('.llm-prompt-generate');
+    const overlay = document.querySelector('.llm-prompt-overlay');
+    
+    const prompt = input.value.trim();
+    if (!prompt) {
+        status.innerHTML = '<span class="error">Please enter a prompt</span>';
+        return;
+    }
+    
+    // Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    status.innerHTML = '<span class="loading">Generating text with AI...</span>';
+    
+    try {
+        // Call Gemini API with proper authentication
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAyvZHMQL723otF0nrBwGy6O4bQ5IiIelo`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: prompt
+                    }]
+                }]
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            const generatedText = data.candidates[0].content.parts[0].text;
+            
+            // Insert generated text into editor
+            const textBefore = overlay.dataset.textBefore;
+            const textAfter = overlay.dataset.textAfter;
+            
+            editor.value = textBefore + generatedText + '\n' + textAfter;
+            
+            // Set cursor position after generated text
+            const newCursorPosition = textBefore.length + generatedText.length + 1;
+            editor.selectionStart = newCursorPosition;
+            editor.selectionEnd = newCursorPosition;
+            
+            // Update preview and close popup
+            updatePreview();
+            closeLLMPrompt();
+            updateStatus('AI text generated successfully!');
+        } else {
+            throw new Error('No content generated from API response');
+        }
+        
+    } catch (error) {
+        console.error('Error generating text:', error);
+        status.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate';
+    }
 }
 
 // Update the preview with markdown rendering
