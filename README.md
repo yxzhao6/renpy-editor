@@ -2,6 +2,9 @@
 
 A beautiful, modern web-based markdown editor with real-time preview and powerful features.
 
+The UI screenshot
+![image](https://github.com/user-attachments/assets/cb2b5f91-9fb4-4531-8fc3-1c99a8e9fc41)
+
 ## Features
 
 - **Real-time Preview** - See your markdown rendered instantly as you type
